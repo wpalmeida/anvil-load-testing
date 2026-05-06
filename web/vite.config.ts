@@ -9,7 +9,7 @@ const allowedHostsEnv = process.env.VITE_ALLOWED_HOSTS?.trim() ?? 'all';
 const allowedHosts: true | string[] =
   allowedHostsEnv === 'all'
     ? true
-    : allowedHostsEnv.split(',').map((s) => s.trim()).filter(Boolean);
+    : allowedHostsEnv.split(',').map((s: string) => s.trim()).filter(Boolean);
 
 export default defineConfig({
   plugins: [react()],
