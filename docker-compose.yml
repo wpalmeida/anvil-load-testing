@@ -103,9 +103,11 @@ services:
     build:
       context: ./web
     environment:
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:4000}
+      # nginx proxies /api/* to this upstream
+      API_UPSTREAM: http://api:4000
     ports:
-      - "5173:5173"
+      # host:5173 → container:80 (nginx). Browser URL stays the same.
+      - "5173:80"
     depends_on:
       - api
 

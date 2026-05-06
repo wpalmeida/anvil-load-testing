@@ -1,6 +1,9 @@
 import type { Profile, Stage } from './profiles';
 
-const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
+// Relative by default — nginx (in production) and Vite's dev proxy (in dev)
+// both forward /api → the API service. Set VITE_API_URL to override with an
+// absolute URL during local development without the proxy.
+const BASE = import.meta.env.VITE_API_URL ?? '/api';
 
 export type Operation = {
   operationId: string;

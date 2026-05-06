@@ -47,7 +47,7 @@ web:
   replicaCount: 1
   service:
     type: ClusterIP
-    port: 5173
+    port: 80
   resources: {}
   podAnnotations: {}
   ingress:
@@ -60,13 +60,10 @@ web:
           - path: /
             pathType: Prefix
     tls: []
-  # Public URL the browser uses to reach the API. With `ingress.enabled` you'd
-  # typically expose api on the same host under a subpath or separate hostname.
-  apiUrl: "http://localhost:4000"
-  # Comma-separated hostnames Vite's dev server will accept, or "all" to
-  # disable the host check. Default "all" is fine for an internal tool gated
-  # by Ingress. Tighten in production with e.g. "anvil.example.com".
-  allowedHosts: "all"
+  # In-cluster URL nginx proxies /api/* to. Defaults to the bundled API
+  # service. Override if the API runs outside the namespace or has a custom
+  # name. The browser never sees this — it only ever talks to the web pod.
+  apiUpstream: ""
 
 # -----------------------------------------------------------------------------
 # Backing services
