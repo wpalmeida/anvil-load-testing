@@ -1,14 +1,24 @@
 # Worker image — Node.js + k6 binary in the same container so the worker can
 # spawn k6 directly. When we move to k8s, swap this for a Job-based runner.
-FROM node:20-bookworm-slim
+#
+# Two-stage build because k6's apt repo only ships amd64. We download the
+# right binary from k6's GitHub releases (which ship arm64 tarballs) using
+# the TARGETARCH that buildx provides per platform.
 
+ARG K6_VERSION=0.55.0
+
+FROM debian:bookworm-slim AS k6-bin
+ARG TARGETARCH
+ARG K6_VERSION
 RUN apt-get update \
- && apt-get install -y --no-install-recommends gnupg ca-certificates curl \
- && curl -fsSL https://dl.k6.io/key.gpg | gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg \
- && echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" > /etc/apt/sources.list.d/k6.list \
- && apt-get update \
- && apt-get install -y --no-install-recommends k6 \
- && rm -rf /var/lib/apt/lists/*
+ && apt-get install -y --no-install-recommends ca-certificates curl \
+ && curl -fsSL "https://github.com/grafana/k6/releases/download/v${K6_VERSION}/k6-v${K6_VERSION}-linux-${TARGETARCH}.tar.gz" -o /tmp/k6.tar.gz \
+ && tar -xzf /tmp/k6.tar.gz -C /tmp \
+ && mv "/tmp/k6-v${K6_VERSION}-linux-${TARGETARCH}/k6" /usr/local/bin/k6 \
+ && chmod +x /usr/local/bin/k6
+
+FROM node:20-bookworm-slim
+COPY --from=k6-bin /usr/local/bin/k6 /usr/local/bin/k6
 
 WORKDIR /app
 COPY package*.json ./
