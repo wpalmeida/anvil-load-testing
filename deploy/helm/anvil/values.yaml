@@ -146,9 +146,14 @@ grafana:
           - path: /
             pathType: Prefix
     tls: []
-  # Public URL the API uses when building the "Open in Grafana" deep-link
-  # the user clicks. With ingress, set to https://grafana.example.com.
-  baseUrl: "http://localhost:3000"
+  # Public URL the BROWSER uses when clicking "Open in Grafana" on a run.
+  # MUST be reachable from the user's machine — leaving this empty in k8s
+  # means the deep-link button is hidden until you provide a real URL.
+  #
+  # If you also enable grafana.ingress.enabled below, this is auto-derived
+  # from ingress.hosts[0] (https when tls is configured), so you usually
+  # don't need to set it explicitly.
+  baseUrl: ""
   dashboardUid: anvil
   external:
     baseUrl: ""            # e.g. https://grafana.your-org.com — bypasses the bundled service entirely
