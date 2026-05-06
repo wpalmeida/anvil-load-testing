@@ -1,0 +1,125 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-loadtest}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  influxdb:
+    image: influxdb:1.8-alpine
+    environment:
+      INFLUXDB_DB: ${INFLUXDB_DB:-k6}
+      INFLUXDB_HTTP_LOG_ENABLED: "false"
+      INFLUXDB_REPORTING_DISABLED: "true"
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdata:/var/lib/influxdb
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8086/ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Editor"
+      GF_AUTH_DISABLE_LOGIN_FORM: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafanadata:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      influxdb:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ./api
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      GRAFANA_BASE_URL: ${GRAFANA_BASE_URL}
+      GRAFANA_DASHBOARD_UID: ${GRAFANA_DASHBOARD_UID}
+      TARGET_HOST_ALLOWLIST: ${TARGET_HOST_ALLOWLIST:-}
+      MAX_VUS: ${MAX_VUS:-}
+      MAX_DURATION_SECONDS: ${MAX_DURATION_SECONDS:-}
+      MAX_CONCURRENT_RUNS: ${MAX_CONCURRENT_RUNS:-}
+      PORT: ${API_PORT:-4000}
+    ports:
+      - "${API_PORT:-4000}:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ./worker
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      INFLUXDB_URL: ${INFLUXDB_URL}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      influxdb:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./web
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:4000}
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+
+  # Sample target API — runs by default so first-time users can try the
+  # platform without their own service. See samples/target-api/README.md.
+  # Comment this service out (or set `profiles: ["sample"]`) if you have
+  # your own API and don't want the demo container running.
+  target-api:
+    build:
+      context: ./samples/target-api
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:
+  influxdata:
+  grafanadata:

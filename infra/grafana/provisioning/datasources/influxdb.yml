@@ -1,0 +1,16 @@
+apiVersion: 1
+
+# Auto-creates the InfluxDB v1 datasource for the bundled docker-compose
+# stack. The uid `influxdb-k6` is referenced by the provisioned dashboard
+# in /etc/grafana/dashboards/anvil.json.
+datasources:
+  - name: InfluxDB
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8086
+    database: k6
+    isDefault: true
+    uid: influxdb-k6
+    editable: true
+    jsonData:
+      httpMode: GET

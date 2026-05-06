@@ -1,0 +1,15 @@
+node_modules/
+dist/
+build/
+*.log
+.DS_Store
+.vite/
+coverage/
+
+# All env files except the example (catches .env, .env.local, .env.old, etc.)
+.env
+.env.*
+!.env.example
+
+# Claude Code session state (assistant working dir — not part of the project)
+.claude/

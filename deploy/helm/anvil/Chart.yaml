@@ -1,0 +1,17 @@
+apiVersion: v2
+name: anvil
+description: Self-service load testing platform — paste an OpenAPI URL, run k6 against it, view results in Grafana.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - load-testing
+  - k6
+  - performance
+  - openapi
+home: https://github.com/your-org/anvil
+sources:
+  - https://github.com/your-org/anvil
+maintainers:
+  - name: Anvil contributors
+icon: https://raw.githubusercontent.com/your-org/anvil/main/assets/logo.png
