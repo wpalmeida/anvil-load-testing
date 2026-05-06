@@ -33,6 +33,8 @@ spec:
           env:
             - name: VITE_API_URL
               value: {{ .Values.web.apiUrl | quote }}
+            - name: VITE_ALLOWED_HOSTS
+              value: {{ .Values.web.allowedHosts | default "all" | quote }}
           resources:
             {{- toYaml .Values.web.resources | nindent 12 }}
 ---

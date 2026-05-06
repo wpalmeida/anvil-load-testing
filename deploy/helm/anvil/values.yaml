@@ -63,6 +63,10 @@ web:
   # Public URL the browser uses to reach the API. With `ingress.enabled` you'd
   # typically expose api on the same host under a subpath or separate hostname.
   apiUrl: "http://localhost:4000"
+  # Comma-separated hostnames Vite's dev server will accept, or "all" to
+  # disable the host check. Default "all" is fine for an internal tool gated
+  # by Ingress. Tighten in production with e.g. "anvil.example.com".
+  allowedHosts: "all"
 
 # -----------------------------------------------------------------------------
 # Backing services
