@@ -74,7 +74,12 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.context }}
-          platforms: linux/amd64,linux/arm64
+          # amd64 only for now. QEMU's user-mode emulation crashes Node.js
+          # randomly during `npm install` (`qemu: uncaught target signal 4`),
+          # so cross-arch builds via emulation are unreliable. To add arm64,
+          # split the matrix to use native arm64 runners (`ubuntu-24.04-arm`,
+          # free for public repos) and merge per-arch images into a manifest.
+          platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
