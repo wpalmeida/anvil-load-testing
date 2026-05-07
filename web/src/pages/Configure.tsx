@@ -122,9 +122,7 @@ export function Configure() {
   const [error, setError] = useState<string | null>(null);
   const [hydratedFromRunId, setHydratedFromRunId] = useState<string | null>(null);
   const [driftedOps, setDriftedOps] = useState<Array<{ method: string; path: string }>>([]);
-  const skipProfileReset = useRef(false);
   const hydratedRef = useRef(false);
-  const hydratedProfileRef = useRef<Profile | null>(null);
 
   useEffect(() => {
     // Strict Mode runs effects twice in dev. We consume sessionStorage entries
@@ -203,10 +201,9 @@ export function Configure() {
         ) {
           setAdvancedOpen(true);
         }
-        // Profile + execution: mark this profile as hydrated so the
-        // profile-reset effect knows to skip its first run for it.
-        skipProfileReset.current = true;
-        hydratedProfileRef.current = rerun.profile;
+        // Hydrate profile + execution from the original run. Resetting to
+        // profile defaults only happens when the user manually changes the
+        // dropdown (handleProfileChange below), so these saved values stick.
         setProfile(rerun.profile);
         if (rerun.execution?.executor === 'constant-vus') {
           setVus(rerun.execution.vus);
@@ -236,21 +233,17 @@ export function Configure() {
     setConfigs(initial);
   }, [navigate]);
 
-  // When profile changes, reset to its defaults — unless we just hydrated
-  // from a previous run, in which case the saved values must win. We compare
-  // against the hydrated profile (not a one-shot flag) because effect order
-  // means the flag would be consumed by the initial-mount run otherwise.
-  useEffect(() => {
-    if (hydratedProfileRef.current === profile) {
-      hydratedProfileRef.current = null;
-      skipProfileReset.current = false;
-      return;
-    }
-    const def = PROFILE_DEFAULTS[profile];
+  // Apply profile defaults only when the *user* changes the dropdown.
+  // Driven by an explicit handler (not a useEffect on `profile`) so that
+  // hydration from a cloned run doesn't get clobbered by an initial-mount
+  // reset before the saved values have committed.
+  function handleProfileChange(newProfile: Profile) {
+    setProfile(newProfile);
+    const def = PROFILE_DEFAULTS[newProfile];
     if (def.vus !== undefined) setVus(def.vus);
     if (def.duration !== undefined) setDuration(def.duration);
     setStages(def.stages ? [...def.stages] : []);
-  }, [profile]);
+  }
 
   const profileDef = PROFILE_DEFAULTS[profile];
   const selectedCount = useMemo(
@@ -484,7 +477,7 @@ export function Configure() {
             <span className="block text-slate-700">Profile</span>
             <select
               value={profile}
-              onChange={(e) => setProfile(e.target.value as Profile)}
+              onChange={(e) => handleProfileChange(e.target.value as Profile)}
               className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
             >
               <option value="smoke">smoke</option>
