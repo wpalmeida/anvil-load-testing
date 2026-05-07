@@ -11,13 +11,13 @@ image:
   pullPolicy: IfNotPresent
   pullSecrets: []
   api:
-    repository: ghcr.io/your-org/anvil-api
+    repository: ghcr.io/wpalmeida/anvil-api
     tag: ""               # falls back to .Chart.AppVersion
   worker:
-    repository: ghcr.io/your-org/anvil-worker
+    repository: ghcr.io/wpalmeida/anvil-worker
     tag: ""
   web:
-    repository: ghcr.io/your-org/anvil-web
+    repository: ghcr.io/wpalmeida/anvil-web
     tag: ""
 
 # -----------------------------------------------------------------------------
