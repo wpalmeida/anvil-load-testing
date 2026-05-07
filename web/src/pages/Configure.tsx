@@ -86,6 +86,10 @@ type SelectedConfig = {
   pathParams: Record<string, string>;
   queryParams: Record<string, string>;
   body: string;
+  // When true, ParamGroup hides empty entries until the user expands. Used
+  // for cloned runs so the user sees only what was previously filled, with
+  // an explicit toggle to reveal the rest of the spec's params.
+  hideEmptyQuery: boolean;
 };
 
 function defaultFor(p: { example: unknown; schema: any }): string {
@@ -151,6 +155,7 @@ export function Configure() {
           op.parameters.filter((p) => p.in === 'query').map((p) => [p.name, defaultFor(p)]),
         ),
         body: defaultBody(op),
+        hideEmptyQuery: false,
       };
     }
 
@@ -211,15 +216,27 @@ export function Configure() {
         } else if (rerun.execution?.executor === 'ramping-vus') {
           setStages(rerun.execution.stages ?? []);
         }
-        // Pre-select operations matched by method + path.
+        // Pre-select operations matched by method + path. Merge saved
+        // values onto the spec-derived defaults so unfilled params remain
+        // visible (toggle below) — otherwise cloning would lose them.
         for (const savedOp of rerun.operations ?? []) {
           const key = `${savedOp.method} ${savedOp.path}`;
           if (!initial[key]) continue;
+          const baseQuery = initial[key].queryParams;
+          const savedQuery = stringifyValues(savedOp.queryParams ?? {});
+          // Reset spec defaults to empty before overlaying saved values so
+          // params the user explicitly cleared in the original run stay empty.
+          const blankedQuery: Record<string, string> = {};
+          for (const k of Object.keys(baseQuery)) blankedQuery[k] = '';
+          const mergedQuery = { ...blankedQuery, ...savedQuery };
+          const hasEmpty = Object.values(mergedQuery).some((v) => v === '');
           initial[key] = {
             selected: true,
-            pathParams: stringifyValues(savedOp.pathParams ?? {}),
-            queryParams: stringifyValues(savedOp.queryParams ?? {}),
+            pathParams: { ...initial[key].pathParams, ...stringifyValues(savedOp.pathParams ?? {}) },
+            queryParams: mergedQuery,
             body: serializeBody(savedOp.body),
+            // Hide empties by default when there are some — user can expand.
+            hideEmptyQuery: hasEmpty,
           };
         }
       } catch (err) {
@@ -652,6 +669,10 @@ export function Configure() {
                       <ParamGroup
                         label="Query params"
                         values={cfg.queryParams}
+                        hideEmpty={cfg.hideEmptyQuery}
+                        onToggleHideEmpty={() =>
+                          update(key, (c) => ({ ...c, hideEmptyQuery: !c.hideEmptyQuery }))
+                        }
                         onChange={(next) => update(key, (c) => ({ ...c, queryParams: next }))}
                       />
                     )}
@@ -1217,17 +1238,45 @@ function StageEditor({
 function ParamGroup({
   label,
   values,
+  hideEmpty,
+  onToggleHideEmpty,
   onChange,
 }: {
   label: string;
   values: Record<string, string>;
+  hideEmpty?: boolean;
+  onToggleHideEmpty?: () => void;
   onChange: (next: Record<string, string>) => void;
 }) {
+  const entries = Object.entries(values);
+  const visible = hideEmpty ? entries.filter(([, v]) => v !== '') : entries;
+  const hiddenCount = entries.length - visible.length;
+
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+      <div className="flex items-baseline justify-between">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+        {onToggleHideEmpty && hiddenCount > 0 && hideEmpty && (
+          <button
+            type="button"
+            onClick={onToggleHideEmpty}
+            className="text-xs text-slate-700 underline hover:text-slate-900"
+          >
+            + show {hiddenCount} empty
+          </button>
+        )}
+        {onToggleHideEmpty && !hideEmpty && entries.some(([, v]) => v === '') && (
+          <button
+            type="button"
+            onClick={onToggleHideEmpty}
+            className="text-xs text-slate-500 underline hover:text-slate-700"
+          >
+            hide empty
+          </button>
+        )}
+      </div>
       <div className="mt-1 grid grid-cols-2 gap-2">
-        {Object.entries(values).map(([name, value]) => (
+        {visible.map(([name, value]) => (
           <label key={name} className="block">
             <span className="block text-xs text-slate-600">{name}</span>
             <input
