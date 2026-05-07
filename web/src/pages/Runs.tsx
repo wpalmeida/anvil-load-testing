@@ -115,9 +115,9 @@ export function Runs() {
                   onClick={() => onEdit(r)}
                   disabled={busyId === r.id}
                   className="text-slate-700 hover:text-slate-900 disabled:opacity-50"
-                  title="Edit and run a new test"
+                  title="Clone this run's config — edit before submitting as a new run"
                 >
-                  edit
+                  clone
                 </button>
                 <button
                   onClick={() => onDelete(r.id, r.service)}

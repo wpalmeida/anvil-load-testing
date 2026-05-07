@@ -362,8 +362,8 @@ export function Configure() {
         </p>
         {hydratedFromRunId && (
           <p className="mt-2 inline-block rounded bg-amber-50 px-2 py-1 text-xs text-amber-900 ring-1 ring-amber-200">
-            Editing a copy of run <code>{hydratedFromRunId.slice(0, 8)}</code> — submitting will
-            create a new run.
+            Cloned from run <code>{hydratedFromRunId.slice(0, 8)}</code> — submitting will create a
+            new run; the original is unchanged.
           </p>
         )}
         {driftedOps.length > 0 && (

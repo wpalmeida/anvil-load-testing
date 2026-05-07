@@ -99,8 +99,9 @@ export function RunDetail() {
           <button
             onClick={onEdit}
             className="inline-block rounded border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            title="Clone this run's config — edit before submitting as a new run"
           >
-            Edit & run new
+            Clone & run
           </button>
           <button
             onClick={onDelete}
