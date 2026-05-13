@@ -180,6 +180,33 @@ function runStep(step, ctx, phase) {
       ctx[e.name] = value;
     }
   }
+  // Auto-capture Set-Cookie cookies from setup/teardown responses so the
+  // VU's cookie jar can replay them per-iteration during the load phase.
+  // Handles session-cookie auth (NextAuth, Django, Rails, Laravel) without
+  // any explicit extract binding.
+  if (res.cookies) {
+    ctx._cookies = ctx._cookies || [];
+    const seen = {};
+    for (let i = 0; i < ctx._cookies.length; i++) {
+      seen[ctx._cookies[i].name + '|' + (ctx._cookies[i].domain || '')] = true;
+    }
+    const names = Object.keys(res.cookies);
+    for (let i = 0; i < names.length; i++) {
+      const arr = res.cookies[names[i]];
+      for (let j = 0; j < arr.length; j++) {
+        const c = arr[j];
+        const key = c.name + '|' + (c.domain || '');
+        if (seen[key]) continue;
+        seen[key] = true;
+        ctx._cookies.push({
+          name: c.name,
+          value: c.value,
+          domain: c.domain || '',
+          path: c.path || '/',
+        });
+      }
+    }
+  }
   return res;
 }
 
@@ -207,8 +234,25 @@ function buildIterationCtx(setupCtx) {
   return ctx;
 }
 
+// Replay setup-captured cookies into this VU's jar before the load phase.
+// Cookies are scoped to the URL passed to jar.set(); BASE_URL covers the
+// common same-origin case (login + API requests share an origin).
+function restoreCookies(ctx) {
+  if (!ctx || !ctx._cookies || ctx._cookies.length === 0) return;
+  const jar = http.cookieJar();
+  for (let i = 0; i < ctx._cookies.length; i++) {
+    const c = ctx._cookies[i];
+    try {
+      jar.set(BASE_URL, c.name, c.value, { path: c.path });
+    } catch (e) {
+      // Some attributes (Secure, SameSite) may reject; silently skip.
+    }
+  }
+}
+
 export default function (data) {
   const ctx = buildIterationCtx(data);
+  restoreCookies(ctx);
   for (let i = 0; i < OPERATIONS.length; i++) {
     const op = OPERATIONS[i];
     const url = BASE_URL + interpolatePath(op.path, op.pathParams) + buildQuery(op.queryParams);

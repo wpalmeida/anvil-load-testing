@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { discover, listRecentSpecs, deleteSpec, type RecentSpec } from '../api';
+import { parseHar } from '../lib/har';
 
 export function Home() {
   const [url, setUrl] = useState('');
@@ -8,6 +9,8 @@ export function Home() {
   const [error, setError] = useState<string | null>(null);
   const [recent, setRecent] = useState<RecentSpec[] | null>(null);
   const [pickingId, setPickingId] = useState<string | null>(null);
+  const [harError, setHarError] = useState<string | null>(null);
+  const harInputRef = useRef<HTMLInputElement | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -35,6 +38,22 @@ export function Home() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     await runDiscover(url);
+  }
+
+  async function onHarFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setHarError(null);
+    try {
+      const text = await file.text();
+      const result = parseHar(text);
+      sessionStorage.setItem('anvil:discover', JSON.stringify(result));
+      navigate('/configure');
+    } catch (err) {
+      setHarError((err as Error).message);
+    } finally {
+      if (harInputRef.current) harInputRef.current.value = '';
+    }
   }
 
   async function onForget(e: React.MouseEvent, spec: RecentSpec) {
@@ -76,6 +95,27 @@ export function Home() {
           </button>
         </form>
         {error && <p className="text-sm text-red-600">{error}</p>}
+      </section>
+
+      <section className="space-y-2 rounded border border-dashed border-slate-300 bg-slate-50 p-4">
+        <h2 className="text-sm font-semibold text-slate-700">
+          Or import endpoints from a HAR file
+        </h2>
+        <p className="text-xs text-slate-600">
+          For apps without an OpenAPI spec (Next.js, Rails, etc.): in Chrome DevTools{' '}
+          <strong>Network</strong> tab, do the user flow you want to test, then{' '}
+          <strong>right-click → Save all as HAR with content</strong>. Upload it here and
+          Anvil will extract unique endpoints, filter out static assets, and drop you
+          into Configure.
+        </p>
+        <input
+          ref={harInputRef}
+          type="file"
+          accept=".har,application/json"
+          onChange={onHarFile}
+          className="block w-full text-xs file:mr-3 file:rounded file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-slate-700"
+        />
+        {harError && <p className="text-sm text-red-600">{harError}</p>}
       </section>
 
       {recent && recent.length > 0 && (
