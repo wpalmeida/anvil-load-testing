@@ -77,6 +77,7 @@ spec:
       labels:
         {{- include "anvil.componentLabels" (merge (dict "component" "postgres") .) | nindent 8 }}
     spec:
+      {{- include "anvil.scheduling" .Values.postgres | nindent 6 }}
       containers:
         - name: postgres
           image: {{ include "anvil.image" (dict "image" .Values.postgres.image "default" "16-alpine") }}

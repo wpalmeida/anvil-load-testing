@@ -30,6 +30,12 @@ api:
     port: 4000
   resources: {}
   podAnnotations: {}
+  # Pod scheduling — all empty by default; populate to constrain placement.
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  topologySpreadConstraints: []
+  priorityClassName: ""
   # Safety guards — empty/0 means "no limit".
   guards:
     targetHostAllowlist: ""        # comma-separated, supports *.suffix
@@ -42,6 +48,11 @@ worker:
   resources: {}
   concurrency: 2
   podAnnotations: {}
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  topologySpreadConstraints: []
+  priorityClassName: ""
 
 web:
   replicaCount: 1
@@ -50,6 +61,11 @@ web:
     port: 80
   resources: {}
   podAnnotations: {}
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  topologySpreadConstraints: []
+  priorityClassName: ""
   ingress:
     enabled: false
     className: ""
@@ -89,6 +105,11 @@ postgres:
     size: 1Gi
     storageClass: ""
   resources: {}
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  topologySpreadConstraints: []
+  priorityClassName: ""
   # When enabled=false, set this to a full URL:
   external:
     url: ""                # e.g. postgresql://user:pass@pg.internal:5432/loadtest
@@ -103,6 +124,11 @@ redis:
     size: 1Gi
     storageClass: ""
   resources: {}
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  topologySpreadConstraints: []
+  priorityClassName: ""
   external:
     url: ""                # e.g. redis://redis.internal:6379
 
@@ -117,6 +143,11 @@ influxdb:
     size: 5Gi
     storageClass: ""
   resources: {}
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  topologySpreadConstraints: []
+  priorityClassName: ""
   external:
     url: ""                # e.g. http://influx.internal:8086/k6
 
@@ -136,6 +167,11 @@ grafana:
     size: 1Gi
     storageClass: ""
   resources: {}
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  topologySpreadConstraints: []
+  priorityClassName: ""
   ingress:
     enabled: false
     className: ""

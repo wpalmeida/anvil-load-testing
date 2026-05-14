@@ -51,6 +51,37 @@ Pass {{ include "anvil.image" (dict "image" .Values.image.api "default" .Chart.A
 {{- end -}}
 
 {{/*
+Pod scheduling fields. Pass a service's values root (e.g. .Values.worker)
+and the macro emits nodeSelector / affinity / tolerations /
+topologySpreadConstraints / priorityClassName only for fields that are set.
+Empty defaults produce no output, so it's safe to call unconditionally.
+
+Usage:
+  {{- include "anvil.scheduling" .Values.worker | nindent 6 }}
+*/}}
+{{- define "anvil.scheduling" -}}
+{{- with .nodeSelector }}
+nodeSelector:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with .affinity }}
+affinity:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with .tolerations }}
+tolerations:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with .topologySpreadConstraints }}
+topologySpreadConstraints:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- if .priorityClassName }}
+priorityClassName: {{ .priorityClassName | quote }}
+{{- end }}
+{{- end -}}
+
+{{/*
 Backing-service URLs — bundled in-cluster Service, or external override.
 */}}
 {{- define "anvil.postgresUrl" -}}

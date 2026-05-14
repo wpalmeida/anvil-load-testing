@@ -36,6 +36,7 @@ spec:
       labels:
         {{- include "anvil.componentLabels" (merge (dict "component" "redis") .) | nindent 8 }}
     spec:
+      {{- include "anvil.scheduling" .Values.redis | nindent 6 }}
       containers:
         - name: redis
           image: {{ include "anvil.image" (dict "image" .Values.redis.image "default" "7-alpine") }}

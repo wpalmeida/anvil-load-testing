@@ -79,6 +79,7 @@ spec:
       labels:
         {{- include "anvil.componentLabels" (merge (dict "component" "grafana") .) | nindent 8 }}
     spec:
+      {{- include "anvil.scheduling" .Values.grafana | nindent 6 }}
       securityContext:
         fsGroup: 472
       containers:

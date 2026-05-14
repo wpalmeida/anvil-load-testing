@@ -36,6 +36,7 @@ spec:
       labels:
         {{- include "anvil.componentLabels" (merge (dict "component" "influxdb") .) | nindent 8 }}
     spec:
+      {{- include "anvil.scheduling" .Values.influxdb | nindent 6 }}
       containers:
         - name: influxdb
           image: {{ include "anvil.image" (dict "image" .Values.influxdb.image "default" "1.8-alpine") }}
