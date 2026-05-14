@@ -138,20 +138,39 @@ export function Runs() {
 
 export async function loadRunIntoConfigure(runId: string) {
   const run = await getRun(runId);
+  const testType: 'http' | 'browser' = run.config?.testType ?? 'http';
+
+  // Browser runs were never driven by an OpenAPI spec — skip discovery and
+  // write a stub so Configure has the shape it expects in sessionStorage.
   let spec;
-  try {
-    spec = await discover(run.baseUrl);
-  } catch (err) {
-    throw new Error(
-      `Could not re-discover spec at ${run.baseUrl}: ${(err as Error).message}. ` +
-        `The original run is unchanged; you can rerun it as-is from the runs list.`,
-    );
+  if (testType === 'browser') {
+    spec = {
+      specId: `clone-${runId}`,
+      baseUrl: run.baseUrl,
+      specUrl: '',
+      title: run.service,
+      version: '',
+      operations: [],
+    };
+  } else {
+    try {
+      spec = await discover(run.baseUrl);
+    } catch (err) {
+      throw new Error(
+        `Could not re-discover spec at ${run.baseUrl}: ${(err as Error).message}. ` +
+          `The original run is unchanged; you can rerun it as-is from the runs list.`,
+      );
+    }
   }
+
   const savedOps: Array<{ method: string; path: string }> = run.config?.operations ?? [];
   const specKeys = new Set(spec.operations.map((o) => `${o.method} ${o.path}`));
-  const drifted = savedOps
-    .filter((o) => !specKeys.has(`${o.method} ${o.path}`))
-    .map(({ method, path }) => ({ method, path }));
+  const drifted =
+    testType === 'http'
+      ? savedOps
+          .filter((o) => !specKeys.has(`${o.method} ${o.path}`))
+          .map(({ method, path }) => ({ method, path }))
+      : [];
 
   sessionStorage.setItem('anvil:discover', JSON.stringify(spec));
   sessionStorage.setItem(
@@ -167,13 +186,14 @@ export async function loadRunIntoConfigure(runId: string) {
       thresholds: run.config?.thresholds ?? [],
       setup: run.config?.setup ?? [],
       teardown: run.config?.teardown ?? [],
-      // Datasets are stored as parsed records on the run; rebuild as inputs
-      // so the editor opens with reusable JSON/CSV the user can tweak.
       datasets: (run.config?.datasets ?? []).map((d: any) => ({
         name: d.name,
         format: 'json' as const,
         content: JSON.stringify(d.records ?? [], null, 2),
       })),
+      testType,
+      browserSteps: run.config?.browserSteps ?? [],
+      browserIterations: run.config?.browserIterations ?? 10,
     }),
   );
   if (drifted.length > 0) {

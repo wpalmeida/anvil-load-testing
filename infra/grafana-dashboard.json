@@ -707,6 +707,374 @@
       ],
       "title": "$Measurement (heatmap)",
       "type": "heatmap"
+    },
+    {
+      "collapsed": false,
+      "datasource": { "type": "datasource", "uid": "grafana" },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 30 },
+      "id": 30,
+      "panels": [],
+      "title": "Browser Web Vitals (k6 browser tests)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "description": "Largest Contentful Paint — Google's Good/Needs Improvement/Poor thresholds: <2500ms / 2500-4000ms / >4000ms",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 2500 },
+              { "color": "red", "value": 4000 }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 0, "y": 31 },
+      "id": 31,
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "orientation": "auto",
+        "justifyMode": "auto",
+        "percentChangeColorMode": "standard"
+      },
+      "pluginVersion": "11.1.0",
+      "targets": [
+        {
+          "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+          "query": "SELECT percentile(\"value\", 95) FROM \"browser_web_vital_lcp\" WHERE $timeFilter AND \"run_id\" =~ /^$run_id$/ AND \"service\" =~ /^$service$/",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series"
+        }
+      ],
+      "title": "LCP (p95)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "description": "First Contentful Paint — thresholds: <1800ms / 1800-3000ms / >3000ms",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1800 },
+              { "color": "red", "value": 3000 }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 5, "y": 31 },
+      "id": 32,
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "orientation": "auto",
+        "justifyMode": "auto",
+        "percentChangeColorMode": "standard"
+      },
+      "pluginVersion": "11.1.0",
+      "targets": [
+        {
+          "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+          "query": "SELECT percentile(\"value\", 95) FROM \"browser_web_vital_fcp\" WHERE $timeFilter AND \"run_id\" =~ /^$run_id$/ AND \"service\" =~ /^$service$/",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series"
+        }
+      ],
+      "title": "FCP (p95)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "description": "Interaction to Next Paint — thresholds: <200ms / 200-500ms / >500ms",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 200 },
+              { "color": "red", "value": 500 }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 10, "y": 31 },
+      "id": 33,
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "orientation": "auto",
+        "justifyMode": "auto",
+        "percentChangeColorMode": "standard"
+      },
+      "pluginVersion": "11.1.0",
+      "targets": [
+        {
+          "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+          "query": "SELECT percentile(\"value\", 95) FROM \"browser_web_vital_inp\" WHERE $timeFilter AND \"run_id\" =~ /^$run_id$/ AND \"service\" =~ /^$service$/",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series"
+        }
+      ],
+      "title": "INP (p95)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "description": "Cumulative Layout Shift — unitless. Thresholds: <0.1 good, 0.1-0.25 needs improvement, >0.25 poor",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.1 },
+              { "color": "red", "value": 0.25 }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 15, "y": 31 },
+      "id": 34,
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "orientation": "auto",
+        "justifyMode": "auto",
+        "percentChangeColorMode": "standard"
+      },
+      "pluginVersion": "11.1.0",
+      "targets": [
+        {
+          "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+          "query": "SELECT max(\"value\") FROM \"browser_web_vital_cls\" WHERE $timeFilter AND \"run_id\" =~ /^$run_id$/ AND \"service\" =~ /^$service$/",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series"
+        }
+      ],
+      "title": "CLS (max)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "description": "Time To First Byte — thresholds: <800ms / 800-1800ms / >1800ms",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 800 },
+              { "color": "red", "value": 1800 }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 31 },
+      "id": 35,
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto",
+        "orientation": "auto",
+        "justifyMode": "auto",
+        "percentChangeColorMode": "standard"
+      },
+      "pluginVersion": "11.1.0",
+      "targets": [
+        {
+          "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+          "query": "SELECT percentile(\"value\", 95) FROM \"browser_web_vital_ttfb\" WHERE $timeFilter AND \"run_id\" =~ /^$run_id$/ AND \"service\" =~ /^$service$/",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series"
+        }
+      ],
+      "title": "TTFB (p95)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "description": "Web Vitals over time — p95 per interval",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 5,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "decimals": 0,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 80 }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 35 },
+      "id": 36,
+      "options": {
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "alias": "LCP",
+          "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+          "query": "SELECT percentile(\"value\", 95) FROM \"browser_web_vital_lcp\" WHERE $timeFilter AND \"run_id\" =~ /^$run_id$/ AND \"service\" =~ /^$service$/ GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series"
+        },
+        {
+          "alias": "FCP",
+          "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+          "query": "SELECT percentile(\"value\", 95) FROM \"browser_web_vital_fcp\" WHERE $timeFilter AND \"run_id\" =~ /^$run_id$/ AND \"service\" =~ /^$service$/ GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "refId": "B",
+          "resultFormat": "time_series"
+        },
+        {
+          "alias": "INP",
+          "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+          "query": "SELECT percentile(\"value\", 95) FROM \"browser_web_vital_inp\" WHERE $timeFilter AND \"run_id\" =~ /^$run_id$/ AND \"service\" =~ /^$service$/ GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "refId": "C",
+          "resultFormat": "time_series"
+        },
+        {
+          "alias": "TTFB",
+          "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+          "query": "SELECT percentile(\"value\", 95) FROM \"browser_web_vital_ttfb\" WHERE $timeFilter AND \"run_id\" =~ /^$run_id$/ AND \"service\" =~ /^$service$/ GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "refId": "D",
+          "resultFormat": "time_series"
+        }
+      ],
+      "title": "Web Vitals over time (p95)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "description": "Cumulative Layout Shift per interval",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "orange", "mode": "fixed" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 25,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "line+area" }
+          },
+          "decimals": 3,
+          "min": 0,
+          "max": 0.5,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.1 },
+              { "color": "red", "value": 0.25 }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 35 },
+      "id": 37,
+      "options": {
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "alias": "CLS",
+          "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+          "query": "SELECT max(\"value\") FROM \"browser_web_vital_cls\" WHERE $timeFilter AND \"run_id\" =~ /^$run_id$/ AND \"service\" =~ /^$service$/ GROUP BY time($__interval) fill(null)",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series"
+        }
+      ],
+      "title": "CLS over time",
+      "type": "timeseries"
     }
   ],
   "refresh": "5s",

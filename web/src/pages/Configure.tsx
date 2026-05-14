@@ -200,6 +200,13 @@ export function Configure() {
         if (rerun.setup && rerun.setup.length > 0) setSetupSteps(rerun.setup);
         if (rerun.teardown && rerun.teardown.length > 0) setTeardownSteps(rerun.teardown);
         if (rerun.datasets && rerun.datasets.length > 0) setDatasets(rerun.datasets);
+        if (rerun.testType) setTestType(rerun.testType);
+        if (rerun.browserSteps && rerun.browserSteps.length > 0) {
+          setBrowserSteps(rerun.browserSteps);
+        }
+        if (typeof rerun.browserIterations === 'number') {
+          setBrowserIterations(rerun.browserIterations);
+        }
         // Open the advanced panel automatically if any of its sections
         // were used in the original run, so the user sees the carried-over
         // values instead of an empty collapsed group.
@@ -1510,6 +1517,9 @@ type RerunConfig = {
   setup?: Step[];
   teardown?: Step[];
   datasets?: DatasetInput[];
+  testType?: TestType;
+  browserSteps?: BrowserStep[];
+  browserIterations?: number;
 };
 
 function stringifyValues(o: Record<string, unknown>): Record<string, string> {
