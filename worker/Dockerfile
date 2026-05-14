@@ -32,6 +32,12 @@ RUN apt-get update \
       dbus \
  && rm -rf /var/lib/apt/lists/*
 ENV K6_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium
+# --no-sandbox: Chromium refuses to start as root without it; in a
+#               container we're root by default. Safe since the worker
+#               is the only thing running here.
+# --disable-dev-shm-usage: containers default /dev/shm to 64MB; Chromium
+#               OOMs without this. Forces it to use /tmp instead.
+ENV K6_BROWSER_ARGS=no-sandbox,disable-dev-shm-usage
 
 WORKDIR /app
 COPY package*.json ./
