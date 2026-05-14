@@ -631,7 +631,7 @@ export function Configure() {
               />
             </label>
             <label className="block">
-              <span className="block text-slate-700">Total iterations</span>
+              <span className="block text-slate-700">Iterations per browser</span>
               <input
                 type="number"
                 min={1}
@@ -642,6 +642,11 @@ export function Configure() {
               />
             </label>
           </div>
+          <p className="text-xs text-slate-500">
+            Total flow executions: <strong>{vus * browserIterations}</strong>
+            {' '}({vus} browser{vus === 1 ? '' : 's'} ×{' '}
+            {browserIterations} iteration{browserIterations === 1 ? '' : 's'})
+          </p>
           <BrowserStepsEditor steps={browserSteps} onChange={setBrowserSteps} />
         </section>
       )}
@@ -781,7 +786,8 @@ export function Configure() {
             ) : (
               <>
                 <strong>{browserSteps.length}</strong> browser step
-                {browserSteps.length === 1 ? '' : 's'} · {vus} VUs · {browserIterations} iter
+                {browserSteps.length === 1 ? '' : 's'} · {vus} × {browserIterations} ={' '}
+                {vus * browserIterations} flow{vus * browserIterations === 1 ? '' : 's'}
               </>
             )}
             {error && <span className="ml-3 text-red-600">{error}</span>}

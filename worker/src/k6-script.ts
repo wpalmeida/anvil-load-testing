@@ -69,10 +69,14 @@ export function buildBrowserScript(args: BuildBrowserScriptArgs): string {
 export const options = {
   scenarios: {
     ui: {
-      executor: 'shared-iterations',
+      // per-vu-iterations: each VU (= browser tab) runs the flow N times.
+      // Total flows = vus * iterations. Picked over shared-iterations
+      // because the latter requires iterations >= vus and gives uneven
+      // per-VU work distribution.
+      executor: 'per-vu-iterations',
       vus: ${args.vus},
       iterations: ${args.iterations},
-      maxDuration: '10m',
+      maxDuration: '30m',
       options: {
         browser: { type: 'chromium' },
       },
