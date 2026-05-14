@@ -20,6 +20,19 @@ RUN apt-get update \
 FROM node:20-bookworm-slim
 COPY --from=k6-bin /usr/local/bin/k6 /usr/local/bin/k6
 
+# Chromium for k6's browser module. Adds ~300MB to the image; required only
+# for "browser" test type runs. HTTP-only runs ignore it. If image size is
+# a concern, fork the Dockerfile and drop these lines.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      chromium \
+      fonts-liberation \
+      libnss3 \
+      ca-certificates \
+      dbus \
+ && rm -rf /var/lib/apt/lists/*
+ENV K6_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium
+
 WORKDIR /app
 COPY package*.json ./
 RUN npm install

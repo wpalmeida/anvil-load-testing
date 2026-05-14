@@ -4,7 +4,7 @@ import { Worker } from 'bullmq';
 import IORedis from 'ioredis';
 import postgres from 'postgres';
 import { runK6 } from './runner.ts';
-import { buildScript } from './k6-script.ts';
+import { buildScript, buildBrowserScript } from './k6-script.ts';
 
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required');
 if (!process.env.REDIS_URL) throw new Error('REDIS_URL is required');
@@ -67,18 +67,31 @@ const worker = new Worker(
       vus: run.vus ?? 1,
       duration: run.duration ?? '30s',
     };
-    const script = buildScript({
-      runId,
-      service: run.service,
-      baseUrl: run.baseUrl,
-      execution,
-      operations: run.config.operations,
-      triggeredBy: run.triggeredBy ?? 'unknown',
-      thresholds: run.config.thresholds ?? [],
-      setup: run.config.setup ?? [],
-      teardown: run.config.teardown ?? [],
-      datasets: run.config.datasets ?? [],
-    });
+    const testType = run.config.testType ?? 'http';
+    const script =
+      testType === 'browser'
+        ? buildBrowserScript({
+            runId,
+            service: run.service,
+            baseUrl: run.baseUrl,
+            triggeredBy: run.triggeredBy ?? 'unknown',
+            vus: run.vus ?? 1,
+            iterations: run.config.browserIterations ?? 10,
+            steps: run.config.browserSteps ?? [],
+            thresholds: run.config.thresholds ?? [],
+          })
+        : buildScript({
+            runId,
+            service: run.service,
+            baseUrl: run.baseUrl,
+            execution,
+            operations: run.config.operations,
+            triggeredBy: run.triggeredBy ?? 'unknown',
+            thresholds: run.config.thresholds ?? [],
+            setup: run.config.setup ?? [],
+            teardown: run.config.teardown ?? [],
+            datasets: run.config.datasets ?? [],
+          });
 
     try {
       // Back-compat: older rows may have authToken instead of authHeaders.

@@ -41,6 +41,89 @@ type Dataset = {
   records: unknown[];
 };
 
+export type BrowserStep = {
+  action: 'goto' | 'click' | 'fill' | 'waitFor' | 'screenshot';
+  url?: string;
+  selector?: string;
+  value?: string;
+  timeoutMs?: number;
+};
+
+export type BuildBrowserScriptArgs = {
+  runId: string;
+  service: string;
+  baseUrl: string;
+  triggeredBy: string;
+  vus: number;
+  iterations: number;
+  steps: BrowserStep[];
+  thresholds?: Threshold[];
+};
+
+export function buildBrowserScript(args: BuildBrowserScriptArgs): string {
+  const thresholdsBlock = renderThresholds(args.thresholds);
+  const stepsCode = args.steps.map((s, i) => renderBrowserStep(s, i)).join('\n    ');
+
+  return `import { browser } from 'k6/browser';
+
+export const options = {
+  scenarios: {
+    ui: {
+      executor: 'shared-iterations',
+      vus: ${args.vus},
+      iterations: ${args.iterations},
+      maxDuration: '10m',
+      options: {
+        browser: { type: 'chromium' },
+      },
+    },
+  },
+  tags: {
+    run_id: ${JSON.stringify(args.runId)},
+    service: ${JSON.stringify(args.service)},
+    triggered_by: ${JSON.stringify(args.triggeredBy)},
+    test_type: 'browser',
+  },${thresholdsBlock}
+};
+
+const BASE_URL = ${JSON.stringify(args.baseUrl)};
+
+export default async function () {
+  const page = await browser.newPage();
+  try {
+    ${stepsCode}
+  } catch (e) {
+    console.error('browser step failed: ' + (e && e.message ? e.message : String(e)));
+    throw e;
+  } finally {
+    await page.close();
+  }
+}
+`;
+}
+
+function renderBrowserStep(step: BrowserStep, idx: number): string {
+  const timeout = step.timeoutMs ? `, { timeout: ${step.timeoutMs} }` : '';
+  switch (step.action) {
+    case 'goto': {
+      const url = step.url || '';
+      // Resolve relative URLs against BASE_URL.
+      const target = url.startsWith('http') ? JSON.stringify(url) : `BASE_URL + ${JSON.stringify(url)}`;
+      return `// step ${idx + 1}: goto\n    await page.goto(${target}${timeout});`;
+    }
+    case 'click':
+      return `// step ${idx + 1}: click ${step.selector ?? ''}\n    await page.locator(${JSON.stringify(step.selector ?? '')}).click(${timeout ? `{ timeout: ${step.timeoutMs} }` : ''});`;
+    case 'fill':
+      return `// step ${idx + 1}: fill ${step.selector ?? ''}\n    await page.locator(${JSON.stringify(step.selector ?? '')}).fill(${JSON.stringify(step.value ?? '')}${timeout ? `, { timeout: ${step.timeoutMs} }` : ''});`;
+    case 'waitFor':
+      return `// step ${idx + 1}: waitFor ${step.selector ?? ''}\n    await page.locator(${JSON.stringify(step.selector ?? '')}).waitFor({ state: 'visible'${step.timeoutMs ? `, timeout: ${step.timeoutMs}` : ''} });`;
+    case 'screenshot':
+      return `// step ${idx + 1}: screenshot\n    await page.screenshot({ path: ${JSON.stringify(`/tmp/anvil-step-${idx + 1}.png`)} });`;
+    default:
+      return `// unknown step ${idx + 1}`;
+  }
+}
+
 export type BuildScriptArgs = {
   runId: string;
   service: string;

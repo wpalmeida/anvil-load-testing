@@ -16,6 +16,15 @@ const OperationConfig = z.object({
   body: z.unknown().optional(),
 });
 
+// One step of a k6/browser flow (testType === 'browser').
+const BrowserStepConfig = z.object({
+  action: z.enum(['goto', 'click', 'fill', 'waitFor', 'screenshot']),
+  url: z.string().optional(),
+  selector: z.string().optional(),
+  value: z.string().optional(),
+  timeoutMs: z.number().int().positive().optional(),
+});
+
 // k6 threshold expression like "p(95)<500" or "rate<0.01". The metric name
 // the expression applies to is stored separately so the worker can group
 // multiple expressions under the same metric in the k6 options block.
@@ -64,12 +73,24 @@ const CreateRunBody = z.object({
   duration: z.string().regex(/^\d+(ms|s|m|h)$/).optional(),
   stages: z.array(Stage).optional(),
   startVUs: z.number().int().min(0).max(10000).optional(),
-  operations: z.array(OperationConfig).min(1),
+  // testType=http needs operations; testType=browser needs browserSteps.
+  // The shape stays flexible to keep both modes on one endpoint; the
+  // refine() below enforces the right requirement per type.
+  testType: z.enum(['http', 'browser']).default('http'),
+  operations: z.array(OperationConfig).optional(),
+  browserSteps: z.array(BrowserStepConfig).optional(),
+  browserIterations: z.number().int().positive().max(10000).optional(),
   thresholds: z.array(ThresholdConfig).optional(),
   setup: z.array(SetupStep).optional(),
   teardown: z.array(SetupStep).optional(),
   datasets: z.array(DatasetInput).optional(),
-});
+}).refine(
+  (b) =>
+    b.testType === 'browser'
+      ? (b.browserSteps?.length ?? 0) > 0
+      : (b.operations?.length ?? 0) > 0,
+  { message: 'http tests need operations[]; browser tests need browserSteps[]' },
+);
 
 export const runsRoute: FastifyPluginAsync = async (app) => {
   app.post('/runs', async (req, reply) => {
@@ -133,13 +154,16 @@ export const runsRoute: FastifyPluginAsync = async (app) => {
         ${peakVUs},
         ${totalDuration},
         ${sql.json({
-          operations: body.operations,
+          operations: body.operations ?? [],
           authHeaders,
           execution,
           thresholds: body.thresholds ?? [],
           setup: body.setup ?? [],
           teardown: body.teardown ?? [],
           datasets,
+          testType: body.testType,
+          browserSteps: body.browserSteps ?? [],
+          browserIterations: body.browserIterations ?? 10,
         } as any)},
         ${body.triggeredBy ?? null},
         'queued'

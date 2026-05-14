@@ -88,6 +88,16 @@ export type DatasetInput = {
   content: string;
 };
 
+export type BrowserStep = {
+  action: 'goto' | 'click' | 'fill' | 'waitFor' | 'screenshot';
+  url?: string;
+  selector?: string;
+  value?: string;
+  timeoutMs?: number;
+};
+
+export type TestType = 'http' | 'browser';
+
 export type CreateRunArgs = {
   service: string;
   baseUrl: string;
@@ -98,7 +108,7 @@ export type CreateRunArgs = {
   duration?: string;
   stages?: Stage[];
   startVUs?: number;
-  operations: Array<{
+  operations?: Array<{
     method: string;
     path: string;
     pathParams?: Record<string, unknown>;
@@ -110,6 +120,9 @@ export type CreateRunArgs = {
   setup?: Step[];
   teardown?: Step[];
   datasets?: DatasetInput[];
+  testType?: TestType;
+  browserSteps?: BrowserStep[];
+  browserIterations?: number;
 };
 
 export async function createRun(args: CreateRunArgs): Promise<{ id: string }> {

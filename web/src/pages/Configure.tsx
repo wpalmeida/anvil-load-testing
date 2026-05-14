@@ -7,6 +7,8 @@ import {
   type Threshold,
   type Step,
   type DatasetInput,
+  type BrowserStep,
+  type TestType,
 } from '../api';
 import { PROFILE_DEFAULTS, type Profile, type Stage } from '../profiles';
 
@@ -118,6 +120,9 @@ export function Configure() {
   const [teardownSteps, setTeardownSteps] = useState<Step[]>([]);
   const [datasets, setDatasets] = useState<DatasetInput[]>([]);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [testType, setTestType] = useState<TestType>('http');
+  const [browserSteps, setBrowserSteps] = useState<BrowserStep[]>([]);
+  const [browserIterations, setBrowserIterations] = useState(10);
   const [profile, setProfile] = useState<Profile>('smoke');
   const [vus, setVus] = useState(PROFILE_DEFAULTS.smoke.vus ?? 1);
   const [duration, setDuration] = useState(PROFILE_DEFAULTS.smoke.duration ?? '30s');
@@ -346,7 +351,10 @@ export function Configure() {
         authHeaders: Object.keys(authHeaders).length > 0 ? authHeaders : undefined,
         profile,
         ...payload,
-        operations,
+        testType,
+        operations: testType === 'http' ? operations : undefined,
+        browserSteps: testType === 'browser' ? browserSteps : undefined,
+        browserIterations: testType === 'browser' ? browserIterations : undefined,
         thresholds: thresholds.length > 0 ? thresholds : undefined,
         setup: setupSteps.length > 0 ? setupSteps : undefined,
         teardown: teardownSteps.length > 0 ? teardownSteps : undefined,
@@ -399,6 +407,25 @@ export function Configure() {
 
       <section className="space-y-3 rounded border border-slate-200 bg-white p-4">
         <h2 className="font-semibold">Run settings</h2>
+        <div className="flex gap-4 text-sm">
+          {(['http', 'browser'] as const).map((t) => (
+            <label key={t} className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="testType"
+                value={t}
+                checked={testType === t}
+                onChange={() => setTestType(t)}
+              />
+              <span className="font-medium">{t === 'http' ? 'HTTP' : 'Browser (k6 browser)'}</span>
+              <span className="text-xs text-slate-500">
+                {t === 'http'
+                  ? 'hit API endpoints'
+                  : 'real Chromium, Web Vitals — fewer concurrent VUs'}
+              </span>
+            </label>
+          ))}
+        </div>
         <div className="grid grid-cols-2 gap-3 text-sm">
           <label className="block">
             <span className="block text-slate-700">Service name</span>
@@ -576,6 +603,43 @@ export function Configure() {
         </details>
       </section>
 
+      {testType === 'browser' && (
+        <section className="space-y-3 rounded border border-slate-200 bg-white p-4 pb-20">
+          <h2 className="font-semibold">Browser flow</h2>
+          <p className="text-xs text-slate-500">
+            Each iteration opens a fresh Chromium page and runs these steps in order.
+            Returns Web Vitals (LCP, FCP, etc.) plus the HTTP requests Chromium makes.
+            Heavy: 1 VU ≈ 1 browser tab; keep VUs in the low dozens.
+          </p>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <label className="block">
+              <span className="block text-slate-700">Concurrent browsers (VUs)</span>
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={vus}
+                onChange={(e) => setVus(Number(e.target.value))}
+                className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
+              />
+            </label>
+            <label className="block">
+              <span className="block text-slate-700">Total iterations</span>
+              <input
+                type="number"
+                min={1}
+                max={10000}
+                value={browserIterations}
+                onChange={(e) => setBrowserIterations(Number(e.target.value))}
+                className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
+              />
+            </label>
+          </div>
+          <BrowserStepsEditor steps={browserSteps} onChange={setBrowserSteps} />
+        </section>
+      )}
+
+      {testType === 'http' && (
       <section className="pb-20">
         <div className="sticky top-0 z-10 -mx-6 border-b border-slate-200 bg-slate-50/95 px-6 py-3 backdrop-blur-sm">
           <div className="space-y-2">
@@ -698,21 +762,134 @@ export function Configure() {
           })}
         </div>
       </section>
+      )}
 
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-6 py-3">
           <div className="text-sm text-slate-700">
-            <strong>{selectedCount}</strong> operation{selectedCount === 1 ? '' : 's'} selected
+            {testType === 'http' ? (
+              <>
+                <strong>{selectedCount}</strong> operation{selectedCount === 1 ? '' : 's'} selected
+              </>
+            ) : (
+              <>
+                <strong>{browserSteps.length}</strong> browser step
+                {browserSteps.length === 1 ? '' : 's'} · {vus} VUs · {browserIterations} iter
+              </>
+            )}
             {error && <span className="ml-3 text-red-600">{error}</span>}
           </div>
           <button
             onClick={onSubmit}
-            disabled={submitting || selectedCount === 0}
+            disabled={
+              submitting ||
+              (testType === 'http' && selectedCount === 0) ||
+              (testType === 'browser' && browserSteps.length === 0)
+            }
             className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
-            {submitting ? 'Queueing…' : `Run on ${selectedCount} operation${selectedCount === 1 ? '' : 's'}`}
+            {submitting
+              ? 'Queueing…'
+              : testType === 'http'
+                ? `Run on ${selectedCount} operation${selectedCount === 1 ? '' : 's'}`
+                : `Run browser flow (${browserSteps.length} step${browserSteps.length === 1 ? '' : 's'})`}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function BrowserStepsEditor({
+  steps,
+  onChange,
+}: {
+  steps: BrowserStep[];
+  onChange: (next: BrowserStep[]) => void;
+}) {
+  function update(idx: number, patch: Partial<BrowserStep>) {
+    onChange(steps.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
+  }
+  function remove(idx: number) {
+    onChange(steps.filter((_, i) => i !== idx));
+  }
+  function add() {
+    onChange([...steps, { action: 'goto', url: '/' }]);
+  }
+  return (
+    <div className="border-t border-slate-100 pt-3">
+      <div className="flex items-baseline justify-between">
+        <p className="text-sm font-medium text-slate-700">Steps</p>
+        <button
+          type="button"
+          onClick={add}
+          className="text-xs text-slate-700 underline hover:text-slate-900"
+        >
+          + add step
+        </button>
+      </div>
+      <p className="mt-1 text-xs text-slate-500">
+        Selectors are CSS / accessibility queries the same way Playwright expects
+        (<code>#id</code>, <code>button[name="submit"]</code>,{' '}
+        <code>text=Sign in</code>). URLs that don't start with <code>http</code> resolve
+        against the base URL.
+      </p>
+      <div className="mt-2 space-y-2">
+        {steps.length === 0 && (
+          <p className="text-xs text-slate-500">No steps yet — add one to get started.</p>
+        )}
+        {steps.map((step, i) => (
+          <div key={i} className="rounded border border-slate-200 bg-white p-2 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="w-6 text-slate-500">{i + 1}.</span>
+              <select
+                value={step.action}
+                onChange={(e) =>
+                  update(i, { action: e.target.value as BrowserStep['action'] })
+                }
+                className="rounded border border-slate-300 px-2 py-1"
+              >
+                <option value="goto">goto</option>
+                <option value="click">click</option>
+                <option value="fill">fill</option>
+                <option value="waitFor">waitFor</option>
+                <option value="screenshot">screenshot</option>
+              </select>
+              {step.action === 'goto' && (
+                <input
+                  value={step.url ?? ''}
+                  onChange={(e) => update(i, { url: e.target.value })}
+                  placeholder="/login or https://other.host/path"
+                  className="flex-1 rounded border border-slate-300 px-2 py-1 font-mono"
+                />
+              )}
+              {step.action !== 'goto' && step.action !== 'screenshot' && (
+                <input
+                  value={step.selector ?? ''}
+                  onChange={(e) => update(i, { selector: e.target.value })}
+                  placeholder='button#login or input[name="email"]'
+                  className="flex-1 rounded border border-slate-300 px-2 py-1 font-mono"
+                />
+              )}
+              {step.action === 'fill' && (
+                <input
+                  value={step.value ?? ''}
+                  onChange={(e) => update(i, { value: e.target.value })}
+                  placeholder="value to type"
+                  className="w-48 rounded border border-slate-300 px-2 py-1 font-mono"
+                />
+              )}
+              <button
+                type="button"
+                onClick={() => remove(i)}
+                className="text-slate-500 hover:text-red-600"
+                title="Remove step"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
