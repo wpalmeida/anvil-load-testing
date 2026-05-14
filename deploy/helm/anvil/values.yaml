@@ -36,6 +36,17 @@ api:
   tolerations: []
   topologySpreadConstraints: []
   priorityClassName: ""
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+    behavior: {}
+  pdb:
+    enabled: false
+    minAvailable: 1
+    # maxUnavailable: ""
   # Safety guards — empty/0 means "no limit".
   guards:
     targetHostAllowlist: ""        # comma-separated, supports *.suffix
@@ -91,6 +102,19 @@ web:
   tolerations: []
   topologySpreadConstraints: []
   priorityClassName: ""
+  # nginx is cheap; CPU is rarely the bottleneck so the target stays a
+  # touch higher than api's.
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+    behavior: {}
+  pdb:
+    enabled: false
+    minAvailable: 1
+    # maxUnavailable: ""
   ingress:
     enabled: false
     className: ""
