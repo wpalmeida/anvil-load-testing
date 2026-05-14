@@ -54,6 +54,31 @@ worker:
   topologySpreadConstraints: []
   priorityClassName: ""
 
+  # HorizontalPodAutoscaler — scales worker pods on resource utilization.
+  # When enabled, replicaCount is ignored (HPA takes over). For queue-depth
+  # scaling (more accurate for this workload) install KEDA and replace this
+  # with a ScaledObject; left to the operator.
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+    # Optional v2 scaling behavior (windows, policies). Leave empty for
+    # k8s defaults. Example:
+    #   behavior:
+    #     scaleDown:
+    #       stabilizationWindowSeconds: 300
+    behavior: {}
+
+  # PodDisruptionBudget — keeps at least N workers available during
+  # voluntary disruptions (node drains, upgrades) so in-flight runs don't
+  # all die at once.
+  pdb:
+    enabled: false
+    minAvailable: 1
+    # maxUnavailable: ""  # alternative to minAvailable
+
 web:
   replicaCount: 1
   service:
