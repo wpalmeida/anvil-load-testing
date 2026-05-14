@@ -123,6 +123,7 @@ export type CreateRunArgs = {
   testType?: TestType;
   browserSteps?: BrowserStep[];
   browserIterations?: number;
+  browserMaxDuration?: string;
 };
 
 export async function createRun(args: CreateRunArgs): Promise<{ id: string }> {

@@ -77,6 +77,7 @@ const worker = new Worker(
             triggeredBy: run.triggeredBy ?? 'unknown',
             vus: run.vus ?? 1,
             iterations: run.config.browserIterations ?? 10,
+            maxDuration: run.config.browserMaxDuration ?? '5m',
             steps: run.config.browserSteps ?? [],
             thresholds: run.config.thresholds ?? [],
           })

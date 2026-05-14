@@ -194,6 +194,7 @@ export async function loadRunIntoConfigure(runId: string) {
       testType,
       browserSteps: run.config?.browserSteps ?? [],
       browserIterations: run.config?.browserIterations ?? 10,
+      browserMaxDuration: run.config?.browserMaxDuration ?? '5m',
     }),
   );
   if (drifted.length > 0) {

@@ -56,6 +56,7 @@ export type BuildBrowserScriptArgs = {
   triggeredBy: string;
   vus: number;
   iterations: number;
+  maxDuration: string;
   steps: BrowserStep[];
   thresholds?: Threshold[];
 };
@@ -76,7 +77,7 @@ export const options = {
       executor: 'per-vu-iterations',
       vus: ${args.vus},
       iterations: ${args.iterations},
-      maxDuration: '30m',
+      maxDuration: ${JSON.stringify(args.maxDuration)},
       options: {
         browser: { type: 'chromium' },
       },

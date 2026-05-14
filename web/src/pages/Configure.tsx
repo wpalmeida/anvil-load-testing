@@ -123,6 +123,7 @@ export function Configure() {
   const [testType, setTestType] = useState<TestType>('http');
   const [browserSteps, setBrowserSteps] = useState<BrowserStep[]>([]);
   const [browserIterations, setBrowserIterations] = useState(10);
+  const [browserMaxDuration, setBrowserMaxDuration] = useState('5m');
   const [profile, setProfile] = useState<Profile>('smoke');
   const [vus, setVus] = useState(PROFILE_DEFAULTS.smoke.vus ?? 1);
   const [duration, setDuration] = useState(PROFILE_DEFAULTS.smoke.duration ?? '30s');
@@ -206,6 +207,9 @@ export function Configure() {
         }
         if (typeof rerun.browserIterations === 'number') {
           setBrowserIterations(rerun.browserIterations);
+        }
+        if (rerun.browserMaxDuration) {
+          setBrowserMaxDuration(rerun.browserMaxDuration);
         }
         // Open the advanced panel automatically if any of its sections
         // were used in the original run, so the user sees the carried-over
@@ -362,6 +366,7 @@ export function Configure() {
         operations: testType === 'http' ? operations : undefined,
         browserSteps: testType === 'browser' ? browserSteps : undefined,
         browserIterations: testType === 'browser' ? browserIterations : undefined,
+        browserMaxDuration: testType === 'browser' ? browserMaxDuration : undefined,
         thresholds: thresholds.length > 0 ? thresholds : undefined,
         setup: setupSteps.length > 0 ? setupSteps : undefined,
         teardown: teardownSteps.length > 0 ? teardownSteps : undefined,
@@ -453,6 +458,8 @@ export function Configure() {
           </label>
         </div>
 
+        {testType === 'http' && (
+        <>
         <div className="border-t border-slate-100 pt-3">
           <div className="flex items-baseline justify-between">
             <p className="text-sm font-medium text-slate-700">Auth headers (optional)</p>
@@ -608,6 +615,8 @@ export function Configure() {
             <DatasetsEditor datasets={datasets} onChange={setDatasets} />
           </div>
         </details>
+        </>
+        )}
       </section>
 
       {testType === 'browser' && (
@@ -641,11 +650,27 @@ export function Configure() {
                 className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
               />
             </label>
+            <label className="col-span-2 block">
+              <span className="block text-slate-700">
+                Max duration (safety cap; e.g. 30s, 5m, 1h)
+              </span>
+              <input
+                value={browserMaxDuration}
+                onChange={(e) => setBrowserMaxDuration(e.target.value)}
+                placeholder="5m"
+                className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
+              />
+              <span className="mt-1 block text-xs text-slate-500">
+                The test ends when all iterations finish <em>or</em> this elapses,
+                whichever comes first.
+              </span>
+            </label>
           </div>
           <p className="text-xs text-slate-500">
             Total flow executions: <strong>{vus * browserIterations}</strong>
             {' '}({vus} browser{vus === 1 ? '' : 's'} ×{' '}
-            {browserIterations} iteration{browserIterations === 1 ? '' : 's'})
+            {browserIterations} iteration{browserIterations === 1 ? '' : 's'}), capped at{' '}
+            {browserMaxDuration}.
           </p>
           <BrowserStepsEditor steps={browserSteps} onChange={setBrowserSteps} />
         </section>
@@ -1526,6 +1551,7 @@ type RerunConfig = {
   testType?: TestType;
   browserSteps?: BrowserStep[];
   browserIterations?: number;
+  browserMaxDuration?: string;
 };
 
 function stringifyValues(o: Record<string, unknown>): Record<string, string> {

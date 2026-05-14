@@ -80,6 +80,7 @@ const CreateRunBody = z.object({
   operations: z.array(OperationConfig).optional(),
   browserSteps: z.array(BrowserStepConfig).optional(),
   browserIterations: z.number().int().positive().max(10000).optional(),
+  browserMaxDuration: z.string().regex(/^\d+(ms|s|m|h)$/).optional(),
   thresholds: z.array(ThresholdConfig).optional(),
   setup: z.array(SetupStep).optional(),
   teardown: z.array(SetupStep).optional(),
@@ -164,6 +165,7 @@ export const runsRoute: FastifyPluginAsync = async (app) => {
           testType: body.testType,
           browserSteps: body.browserSteps ?? [],
           browserIterations: body.browserIterations ?? 10,
+          browserMaxDuration: body.browserMaxDuration ?? '5m',
         } as any)},
         ${body.triggeredBy ?? null},
         'queued'
