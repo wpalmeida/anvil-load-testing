@@ -11,6 +11,8 @@ export function Home() {
   const [pickingId, setPickingId] = useState<string | null>(null);
   const [harError, setHarError] = useState<string | null>(null);
   const harInputRef = useRef<HTMLInputElement | null>(null);
+  const [browserUrl, setBrowserUrl] = useState('');
+  const [browserError, setBrowserError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -38,6 +40,29 @@ export function Home() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     await runDiscover(url);
+  }
+
+  function onStartBrowserFlow(e: React.FormEvent) {
+    e.preventDefault();
+    setBrowserError(null);
+    let parsed: URL;
+    try {
+      parsed = new URL(browserUrl);
+    } catch {
+      setBrowserError('Enter a valid URL (e.g. https://app.example.com).');
+      return;
+    }
+    const stub = {
+      specId: `browser-${Date.now()}`,
+      baseUrl: `${parsed.protocol}//${parsed.host}`,
+      specUrl: '',
+      title: parsed.host,
+      version: '',
+      operations: [],
+    };
+    sessionStorage.setItem('anvil:discover', JSON.stringify(stub));
+    sessionStorage.setItem('anvil:start-as-browser', '1');
+    navigate('/configure');
   }
 
   async function onHarFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -95,6 +120,34 @@ export function Home() {
           </button>
         </form>
         {error && <p className="text-sm text-red-600">{error}</p>}
+      </section>
+
+      <section className="space-y-2 rounded border border-dashed border-slate-300 bg-slate-50 p-4">
+        <h2 className="text-sm font-semibold text-slate-700">
+          Or run a browser flow (k6 browser)
+        </h2>
+        <p className="text-xs text-slate-600">
+          Skip the OpenAPI dance — drive a real Chromium through a user flow (login,
+          click, type) and capture Web Vitals. Enter the base URL of the app and define
+          the steps on the next screen.
+        </p>
+        <form onSubmit={onStartBrowserFlow} className="flex gap-2">
+          <input
+            type="url"
+            required
+            placeholder="https://app.example.com"
+            value={browserUrl}
+            onChange={(e) => setBrowserUrl(e.target.value)}
+            className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+          />
+          <button
+            type="submit"
+            className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+          >
+            Start browser flow
+          </button>
+        </form>
+        {browserError && <p className="text-sm text-red-600">{browserError}</p>}
       </section>
 
       <section className="space-y-2 rounded border border-dashed border-slate-300 bg-slate-50 p-4">

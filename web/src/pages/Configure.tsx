@@ -149,6 +149,13 @@ export function Configure() {
     const parsed: DiscoverResult = JSON.parse(raw);
     setData(parsed);
 
+    // If the user arrived via "Start browser flow" on Home, default the
+    // test type to browser without waiting for them to flip the radio.
+    if (sessionStorage.getItem('anvil:start-as-browser')) {
+      sessionStorage.removeItem('anvil:start-as-browser');
+      setTestType('browser');
+    }
+
     const initial: Record<string, SelectedConfig> = {};
     for (const op of parsed.operations) {
       const key = `${op.method} ${op.path}`;
