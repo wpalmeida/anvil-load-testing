@@ -122,9 +122,6 @@ export function Configure() {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [testType, setTestType] = useState<TestType>('http');
   const [browserSteps, setBrowserSteps] = useState<BrowserStep[]>([]);
-  const [browserIterations, setBrowserIterations] = useState(10);
-  const [browserMaxDuration, setBrowserMaxDuration] = useState('5m');
-  const [browserProfile, setBrowserProfile] = useState<BrowserProfile>('custom');
   const [profile, setProfile] = useState<Profile>('smoke');
   const [vus, setVus] = useState(PROFILE_DEFAULTS.smoke.vus ?? 1);
   const [duration, setDuration] = useState(PROFILE_DEFAULTS.smoke.duration ?? '30s');
@@ -212,12 +209,6 @@ export function Configure() {
         if (rerun.testType) setTestType(rerun.testType);
         if (rerun.browserSteps && rerun.browserSteps.length > 0) {
           setBrowserSteps(rerun.browserSteps);
-        }
-        if (typeof rerun.browserIterations === 'number') {
-          setBrowserIterations(rerun.browserIterations);
-        }
-        if (rerun.browserMaxDuration) {
-          setBrowserMaxDuration(rerun.browserMaxDuration);
         }
         // Open the advanced panel automatically if any of its sections
         // were used in the original run, so the user sees the carried-over
@@ -373,8 +364,6 @@ export function Configure() {
         testType,
         operations: testType === 'http' ? operations : undefined,
         browserSteps: testType === 'browser' ? browserSteps : undefined,
-        browserIterations: testType === 'browser' ? browserIterations : undefined,
-        browserMaxDuration: testType === 'browser' ? browserMaxDuration : undefined,
         thresholds: thresholds.length > 0 ? thresholds : undefined,
         setup: setupSteps.length > 0 ? setupSteps : undefined,
         teardown: teardownSteps.length > 0 ? teardownSteps : undefined,
@@ -536,8 +525,6 @@ export function Configure() {
           </div>
         </div>
 
-        {testType === 'http' && (
-        <>
         <div className="border-t border-slate-100 pt-3">
           <label className="block text-sm">
             <span className="block text-slate-700">Profile</span>
@@ -587,6 +574,15 @@ export function Configure() {
           <StageEditor stages={stages} onChange={setStages} />
         )}
 
+        {testType === 'browser' && (
+          <p className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            <strong>Heads-up:</strong> in browser mode each VU is a Chromium tab
+            (~200–500 MB RAM). Keep VUs in the low dozens; setting smoke / load /
+            stress profiles is fine but cap VUs around ~50.
+          </p>
+        )}
+
+        {testType === 'http' && (
         <details
           open={advancedOpen}
           onToggle={(e) => setAdvancedOpen((e.currentTarget as HTMLDetailsElement).open)}
@@ -623,7 +619,6 @@ export function Configure() {
             <DatasetsEditor datasets={datasets} onChange={setDatasets} />
           </div>
         </details>
-        </>
         )}
       </section>
 
@@ -631,80 +626,9 @@ export function Configure() {
         <section className="space-y-3 rounded border border-slate-200 bg-white p-4 pb-20">
           <h2 className="font-semibold">Browser flow</h2>
           <p className="text-xs text-slate-500">
-            Each iteration opens a fresh Chromium page and runs these steps in order.
-            Returns Web Vitals (LCP, FCP, etc.) plus the HTTP requests Chromium makes.
-            Heavy: 1 VU ≈ 1 browser tab; keep VUs in the low dozens.
-          </p>
-          <label className="block text-sm">
-            <span className="block text-slate-700">Preset</span>
-            <select
-              value={browserProfile}
-              onChange={(e) => {
-                const next = e.target.value as BrowserProfile;
-                setBrowserProfile(next);
-                const preset = BROWSER_PRESETS[next];
-                if (preset) {
-                  setVus(preset.vus);
-                  setBrowserIterations(preset.iter);
-                  setBrowserMaxDuration(preset.maxDuration);
-                }
-              }}
-              className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
-            >
-              <option value="smoke">smoke (1 × 1, 1m)</option>
-              <option value="load">load (5 × 10, 5m)</option>
-              <option value="stress">stress (20 × 5, 10m)</option>
-              <option value="custom">custom</option>
-            </select>
-            <span className="mt-1 block text-xs text-slate-500">
-              {BROWSER_PRESETS[browserProfile]?.description ??
-                'Define VUs, iterations, and max duration manually below.'}
-            </span>
-          </label>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <label className="block">
-              <span className="block text-slate-700">Concurrent browsers (VUs)</span>
-              <input
-                type="number"
-                min={1}
-                max={50}
-                value={vus}
-                onChange={(e) => setVus(Number(e.target.value))}
-                className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
-              />
-            </label>
-            <label className="block">
-              <span className="block text-slate-700">Iterations per browser</span>
-              <input
-                type="number"
-                min={1}
-                max={10000}
-                value={browserIterations}
-                onChange={(e) => setBrowserIterations(Number(e.target.value))}
-                className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
-              />
-            </label>
-            <label className="col-span-2 block">
-              <span className="block text-slate-700">
-                Max duration (safety cap; e.g. 30s, 5m, 1h)
-              </span>
-              <input
-                value={browserMaxDuration}
-                onChange={(e) => setBrowserMaxDuration(e.target.value)}
-                placeholder="5m"
-                className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
-              />
-              <span className="mt-1 block text-xs text-slate-500">
-                The test ends when all iterations finish <em>or</em> this elapses,
-                whichever comes first.
-              </span>
-            </label>
-          </div>
-          <p className="text-xs text-slate-500">
-            Total flow executions: <strong>{vus * browserIterations}</strong>
-            {' '}({vus} browser{vus === 1 ? '' : 's'} ×{' '}
-            {browserIterations} iteration{browserIterations === 1 ? '' : 's'}), capped at{' '}
-            {browserMaxDuration}.
+            Each VU (= Chromium tab) runs these steps for as long as the Profile
+            above keeps it alive. Returns Web Vitals (LCP, FCP, etc.) plus the
+            HTTP requests Chromium makes.
           </p>
           <BrowserStepsEditor steps={browserSteps} onChange={setBrowserSteps} />
         </section>
@@ -845,8 +769,8 @@ export function Configure() {
             ) : (
               <>
                 <strong>{browserSteps.length}</strong> browser step
-                {browserSteps.length === 1 ? '' : 's'} · {vus} × {browserIterations} ={' '}
-                {vus * browserIterations} flow{vus * browserIterations === 1 ? '' : 's'}
+                {browserSteps.length === 1 ? '' : 's'} · profile{' '}
+                <strong>{profile}</strong> ({vus} VU{vus === 1 ? '' : 's'})
               </>
             )}
             {error && <span className="ml-3 text-red-600">{error}</span>}
@@ -1562,18 +1486,6 @@ function advancedSummary(counts: {
     : 'thresholds, setup/teardown, datasets';
 }
 
-type BrowserProfile = 'smoke' | 'load' | 'stress' | 'custom';
-
-const BROWSER_PRESETS: Record<
-  BrowserProfile,
-  { vus: number; iter: number; maxDuration: string; description: string } | null
-> = {
-  smoke: { vus: 1, iter: 1, maxDuration: '1m', description: 'Sanity check — one browser, one flow.' },
-  load: { vus: 5, iter: 10, maxDuration: '5m', description: 'Steady moderate concurrent load.' },
-  stress: { vus: 20, iter: 5, maxDuration: '10m', description: '20 concurrent browsers — push to breaking.' },
-  custom: null,
-};
-
 type RerunConfig = {
   runId: string;
   service?: string;
@@ -1596,8 +1508,6 @@ type RerunConfig = {
   datasets?: DatasetInput[];
   testType?: TestType;
   browserSteps?: BrowserStep[];
-  browserIterations?: number;
-  browserMaxDuration?: string;
 };
 
 function stringifyValues(o: Record<string, unknown>): Record<string, string> {

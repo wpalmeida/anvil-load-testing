@@ -54,9 +54,7 @@ export type BuildBrowserScriptArgs = {
   service: string;
   baseUrl: string;
   triggeredBy: string;
-  vus: number;
-  iterations: number;
-  maxDuration: string;
+  execution: Execution;
   steps: BrowserStep[];
   thresholds?: Threshold[];
   authHeaders?: Record<string, string>;
@@ -65,24 +63,13 @@ export type BuildBrowserScriptArgs = {
 export function buildBrowserScript(args: BuildBrowserScriptArgs): string {
   const thresholdsBlock = renderThresholds(args.thresholds);
   const stepsCode = args.steps.map((s, i) => renderBrowserStep(s, i)).join('\n    ');
+  const scenario = renderBrowserScenario(args.execution);
 
   return `import { browser } from 'k6/browser';
 
 export const options = {
   scenarios: {
-    ui: {
-      // per-vu-iterations: each VU (= browser tab) runs the flow N times.
-      // Total flows = vus * iterations. Picked over shared-iterations
-      // because the latter requires iterations >= vus and gives uneven
-      // per-VU work distribution.
-      executor: 'per-vu-iterations',
-      vus: ${args.vus},
-      iterations: ${args.iterations},
-      maxDuration: ${JSON.stringify(args.maxDuration)},
-      options: {
-        browser: { type: 'chromium' },
-      },
-    },
+    ui: ${scenario},
   },
   tags: {
     run_id: ${JSON.stringify(args.runId)},
@@ -407,6 +394,29 @@ function renderThresholds(thresholds?: Threshold[]): string {
     ([metric, items]) => `    ${JSON.stringify(metric)}: [${items.join(', ')}],`,
   );
   return `\n  thresholds: {\n${lines.join('\n')}\n  },`;
+}
+
+function renderBrowserScenario(exec: Execution): string {
+  const browserOpt = `      options: { browser: { type: 'chromium' } },`;
+  if (exec.executor === 'constant-vus') {
+    return `{
+      executor: 'constant-vus',
+      vus: ${exec.vus},
+      duration: ${JSON.stringify(exec.duration)},
+${browserOpt}
+    }`;
+  }
+  const stages = exec.stages
+    .map((s) => `        { duration: ${JSON.stringify(s.duration)}, target: ${s.target} }`)
+    .join(',\n');
+  return `{
+      executor: 'ramping-vus',
+      startVUs: ${exec.startVUs},
+      stages: [
+${stages}
+      ],
+${browserOpt}
+    }`;
 }
 
 function renderScenario(exec: Execution): string {
