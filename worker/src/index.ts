@@ -68,6 +68,13 @@ const worker = new Worker(
       duration: run.duration ?? '30s',
     };
     const testType = run.config.testType ?? 'http';
+    // Build auth headers up here so both script types and the worker's env
+    // injection can share the value. Back-compat: older rows may have
+    // authToken instead of authHeaders.
+    const authHeaders: Record<string, string> = { ...(run.config.authHeaders ?? {}) };
+    if (run.config.authToken && !authHeaders['Authorization']) {
+      authHeaders['Authorization'] = `Bearer ${run.config.authToken}`;
+    }
     const script =
       testType === 'browser'
         ? buildBrowserScript({
@@ -80,6 +87,7 @@ const worker = new Worker(
             maxDuration: run.config.browserMaxDuration ?? '5m',
             steps: run.config.browserSteps ?? [],
             thresholds: run.config.thresholds ?? [],
+            authHeaders,
           })
         : buildScript({
             runId,
@@ -95,12 +103,6 @@ const worker = new Worker(
           });
 
     try {
-      // Back-compat: older rows may have authToken instead of authHeaders.
-      const authHeaders: Record<string, string> = { ...(run.config.authHeaders ?? {}) };
-      if (run.config.authToken && !authHeaders['Authorization']) {
-        authHeaders['Authorization'] = `Bearer ${run.config.authToken}`;
-      }
-
       const { code, stderr, summary } = await runK6({
         script,
         influxUrl: process.env.INFLUXDB_URL!,

@@ -59,6 +59,7 @@ export type BuildBrowserScriptArgs = {
   maxDuration: string;
   steps: BrowserStep[];
   thresholds?: Threshold[];
+  authHeaders?: Record<string, string>;
 };
 
 export function buildBrowserScript(args: BuildBrowserScriptArgs): string {
@@ -92,10 +93,15 @@ export const options = {
 };
 
 const BASE_URL = ${JSON.stringify(args.baseUrl)};
+const AUTH_HEADERS = ${JSON.stringify(args.authHeaders ?? {})};
 
 export default async function () {
   const page = await browser.newPage();
   try {
+    // Apply auth headers to every request Chromium makes during this flow.
+    if (Object.keys(AUTH_HEADERS).length > 0) {
+      await page.setExtraHTTPHeaders(AUTH_HEADERS);
+    }
     ${stepsCode}
   } catch (e) {
     console.error('browser step failed: ' + (e && e.message ? e.message : String(e)));

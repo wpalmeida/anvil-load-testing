@@ -124,6 +124,7 @@ export function Configure() {
   const [browserSteps, setBrowserSteps] = useState<BrowserStep[]>([]);
   const [browserIterations, setBrowserIterations] = useState(10);
   const [browserMaxDuration, setBrowserMaxDuration] = useState('5m');
+  const [browserProfile, setBrowserProfile] = useState<BrowserProfile>('custom');
   const [profile, setProfile] = useState<Profile>('smoke');
   const [vus, setVus] = useState(PROFILE_DEFAULTS.smoke.vus ?? 1);
   const [duration, setDuration] = useState(PROFILE_DEFAULTS.smoke.duration ?? '30s');
@@ -465,8 +466,6 @@ export function Configure() {
           </label>
         </div>
 
-        {testType === 'http' && (
-        <>
         <div className="border-t border-slate-100 pt-3">
           <div className="flex items-baseline justify-between">
             <p className="text-sm font-medium text-slate-700">Auth headers (optional)</p>
@@ -537,6 +536,8 @@ export function Configure() {
           </div>
         </div>
 
+        {testType === 'http' && (
+        <>
         <div className="border-t border-slate-100 pt-3">
           <label className="block text-sm">
             <span className="block text-slate-700">Profile</span>
@@ -634,6 +635,32 @@ export function Configure() {
             Returns Web Vitals (LCP, FCP, etc.) plus the HTTP requests Chromium makes.
             Heavy: 1 VU ≈ 1 browser tab; keep VUs in the low dozens.
           </p>
+          <label className="block text-sm">
+            <span className="block text-slate-700">Preset</span>
+            <select
+              value={browserProfile}
+              onChange={(e) => {
+                const next = e.target.value as BrowserProfile;
+                setBrowserProfile(next);
+                const preset = BROWSER_PRESETS[next];
+                if (preset) {
+                  setVus(preset.vus);
+                  setBrowserIterations(preset.iter);
+                  setBrowserMaxDuration(preset.maxDuration);
+                }
+              }}
+              className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
+            >
+              <option value="smoke">smoke (1 × 1, 1m)</option>
+              <option value="load">load (5 × 10, 5m)</option>
+              <option value="stress">stress (20 × 5, 10m)</option>
+              <option value="custom">custom</option>
+            </select>
+            <span className="mt-1 block text-xs text-slate-500">
+              {BROWSER_PRESETS[browserProfile]?.description ??
+                'Define VUs, iterations, and max duration manually below.'}
+            </span>
+          </label>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <label className="block">
               <span className="block text-slate-700">Concurrent browsers (VUs)</span>
@@ -1534,6 +1561,18 @@ function advancedSummary(counts: {
     ? parts.join(' · ')
     : 'thresholds, setup/teardown, datasets';
 }
+
+type BrowserProfile = 'smoke' | 'load' | 'stress' | 'custom';
+
+const BROWSER_PRESETS: Record<
+  BrowserProfile,
+  { vus: number; iter: number; maxDuration: string; description: string } | null
+> = {
+  smoke: { vus: 1, iter: 1, maxDuration: '1m', description: 'Sanity check — one browser, one flow.' },
+  load: { vus: 5, iter: 10, maxDuration: '5m', description: 'Steady moderate concurrent load.' },
+  stress: { vus: 20, iter: 5, maxDuration: '10m', description: '20 concurrent browsers — push to breaking.' },
+  custom: null,
+};
 
 type RerunConfig = {
   runId: string;
