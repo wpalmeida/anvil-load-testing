@@ -12,13 +12,18 @@ import {
 } from '../api';
 import { PROFILE_DEFAULTS, type Profile, type Stage } from '../profiles';
 
+// Each preset is scoped to a test type via the `for` field. ThresholdEditor
+// filters by the current testType; presetFor() looks across both so
+// rowToThreshold can find a preset regardless of context.
 const THRESHOLD_PRESETS = [
+  // HTTP-mode metrics
   {
     metric: 'http_req_duration',
     label: 'Response time',
     stats: ['avg', 'med', 'p(90)', 'p(95)', 'p(99)', 'max'],
     unit: 'ms',
     valueIsRate: false,
+    for: 'http',
   },
   {
     metric: 'http_req_failed',
@@ -26,6 +31,7 @@ const THRESHOLD_PRESETS = [
     stats: ['rate'],
     unit: '%',
     valueIsRate: true,
+    for: 'http',
   },
   {
     metric: 'iteration_duration',
@@ -33,6 +39,7 @@ const THRESHOLD_PRESETS = [
     stats: ['avg', 'p(95)', 'max'],
     unit: 'ms',
     valueIsRate: false,
+    for: 'http',
   },
   {
     metric: 'http_reqs',
@@ -40,6 +47,7 @@ const THRESHOLD_PRESETS = [
     stats: ['count', 'rate'],
     unit: '',
     valueIsRate: false,
+    for: 'http',
   },
   {
     metric: 'checks',
@@ -47,6 +55,54 @@ const THRESHOLD_PRESETS = [
     stats: ['rate'],
     unit: '%',
     valueIsRate: true,
+    for: 'http',
+  },
+  // Browser-mode Web Vitals (k6/browser). Google's Good/Needs Improvement/
+  // Poor cut-offs are useful starting thresholds:
+  //   LCP   <2500ms / 2500-4000 / >4000
+  //   FCP   <1800ms / 1800-3000 / >3000
+  //   INP   <200ms  / 200-500   / >500
+  //   CLS   <0.1    / 0.1-0.25  / >0.25
+  //   TTFB  <800ms  / 800-1800  / >1800
+  {
+    metric: 'browser_web_vital_lcp',
+    label: 'LCP — Largest Contentful Paint',
+    stats: ['avg', 'p(90)', 'p(95)', 'p(99)', 'max'],
+    unit: 'ms',
+    valueIsRate: false,
+    for: 'browser',
+  },
+  {
+    metric: 'browser_web_vital_fcp',
+    label: 'FCP — First Contentful Paint',
+    stats: ['avg', 'p(90)', 'p(95)', 'p(99)', 'max'],
+    unit: 'ms',
+    valueIsRate: false,
+    for: 'browser',
+  },
+  {
+    metric: 'browser_web_vital_inp',
+    label: 'INP — Interaction to Next Paint',
+    stats: ['avg', 'p(90)', 'p(95)', 'p(99)', 'max'],
+    unit: 'ms',
+    valueIsRate: false,
+    for: 'browser',
+  },
+  {
+    metric: 'browser_web_vital_cls',
+    label: 'CLS — Cumulative Layout Shift',
+    stats: ['avg', 'max'],
+    unit: '',
+    valueIsRate: false,
+    for: 'browser',
+  },
+  {
+    metric: 'browser_web_vital_ttfb',
+    label: 'TTFB — Time to First Byte',
+    stats: ['avg', 'p(90)', 'p(95)', 'max'],
+    unit: 'ms',
+    valueIsRate: false,
+    for: 'browser',
   },
 ] as const;
 
@@ -582,7 +638,6 @@ export function Configure() {
           </p>
         )}
 
-        {testType === 'http' && (
         <details
           open={advancedOpen}
           onToggle={(e) => setAdvancedOpen((e.currentTarget as HTMLDetailsElement).open)}
@@ -600,8 +655,14 @@ export function Configure() {
             </span>
           </summary>
           <div className="mt-3 space-y-1">
-            <ThresholdEditor rows={thresholdRows} onChange={setThresholdRows} />
+            <ThresholdEditor
+              rows={thresholdRows}
+              onChange={setThresholdRows}
+              testType={testType}
+            />
 
+            {testType === 'http' && (
+            <>
             <StepsEditor
               label="Setup steps"
               help="Run once before the load phase. Use to log in, seed data, etc. Bind values from responses (e.g. token from JSON) so operations can reference them as {{name}} in headers and body."
@@ -617,9 +678,10 @@ export function Configure() {
             />
 
             <DatasetsEditor datasets={datasets} onChange={setDatasets} />
+            </>
+            )}
           </div>
         </details>
-        )}
       </section>
 
       {testType === 'browser' && (
@@ -1221,10 +1283,14 @@ function ExtractEditor({
 function ThresholdEditor({
   rows,
   onChange,
+  testType,
 }: {
   rows: ThresholdRow[];
   onChange: (next: ThresholdRow[]) => void;
+  testType: TestType;
 }) {
+  const visiblePresets = THRESHOLD_PRESETS.filter((p) => p.for === testType);
+  const defaultPreset = visiblePresets[0];
   function update(idx: number, patch: Partial<ThresholdRow>) {
     onChange(
       rows.map((r, i) => {
@@ -1245,10 +1311,15 @@ function ThresholdEditor({
     onChange(rows.filter((_, i) => i !== idx));
   }
   function add() {
-    onChange([
-      ...rows,
-      { metric: 'http_req_duration', stat: 'p(95)', op: '<', value: '500' },
-    ]);
+    const start = defaultPreset
+      ? {
+          metric: defaultPreset.metric,
+          stat: defaultPreset.stats[0],
+          op: '<',
+          value: defaultPreset.metric.includes('cls') ? '0.1' : '500',
+        }
+      : { metric: 'http_req_duration', stat: 'p(95)', op: '<', value: '500' };
+    onChange([...rows, start]);
   }
 
   return (
@@ -1282,7 +1353,7 @@ function ThresholdEditor({
                 onChange={(e) => update(i, { metric: e.target.value })}
                 className="rounded border border-slate-300 px-2 py-1"
               >
-                {THRESHOLD_PRESETS.map((p) => (
+                {visiblePresets.map((p) => (
                   <option key={p.metric} value={p.metric}>
                     {p.label}
                   </option>
